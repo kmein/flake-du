@@ -17,10 +17,12 @@ nix run github:nix-community/nix-melt
 ```
 
 ```
-Usage: nix-melt [OPTIONS] [PATH]
+Usage: nix-melt [OPTIONS] [PATH] [COMMAND]
 
-Arguments:
-  [PATH]  Path to the flake.lock or the directory containing flake.lock [default: flake.lock]
+Commands:
+  pane  Open the pane view
+  tree  Print the tree view to stdout
+  help  Print this message or the help of the given subcommand(s)
 
 Options:
   -t, --time-format <TIME_FORMAT>  Format to display timestamps
@@ -28,6 +30,14 @@ Options:
   -h, --help                       Print help
   -V, --version                    Print version
 ```
+
+`nix-melt [PATH]` still opens the pane view by default. The tree view is available directly as a subcommand, e.g. `nix-melt tree .`.
+
+`nix-melt tree` prints a recursive tree to stdout and exits, so it can be piped or redirected without any terminal control sequences. Any size warning is written to stderr.
+
+By default, the tree shows each input's own store size and its cumulative subtree size. You can hide either column with `--no-self-size` or `--no-cumulative-size`.
+
+The tree view shows the Nix store size of each locked flake input. `follows` edges are aliases, so they always show `0 B`. Cumulative totals are deduplicated by store path, so shared inputs do not inflate subtree totals. To compute those sizes, `nix-melt` first resolves store paths from `nix flake archive --dry-run` and then fetches any missing locked inputs individually with `builtins.fetchTree`.
 
 ## Changelog
 

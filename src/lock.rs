@@ -5,11 +5,18 @@ use indexmap::IndexMap;
 use parse_display::Display;
 use rustc_hash::FxHasher;
 use serde::Deserialize;
+use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 use serde_with::{Map, serde_as};
 
 pub(crate) struct Resolve {
     pub root: Node,
     pub nodes: IndexMap<String, Node, BuildHasherDefault<FxHasher>>,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum NodeId {
+    Root,
+    Node(String),
 }
 
 #[derive(Deserialize)]
@@ -53,18 +60,61 @@ pub enum Value {
     Int(i64),
 }
 
+impl Locked {
+    pub(crate) fn fetch_tree_spec(&self) -> JsonMap<String, JsonValue> {
+        let mut spec = JsonMap::new();
+        spec.insert("type".to_string(), JsonValue::String(self.type_.clone()));
+
+        for (key, value) in &self.fields {
+            if key == "revCount" {
+                continue;
+            }
+
+            spec.insert(key.clone(), value.to_json());
+        }
+
+        spec
+    }
+}
+
+impl Value {
+    fn to_json(&self) -> JsonValue {
+        match self {
+            Self::String(value) => JsonValue::String(value.clone()),
+            Self::Bool(value) => JsonValue::Bool(*value),
+            Self::Int(value) => JsonValue::Number(JsonNumber::from(*value)),
+        }
+    }
+}
+
 impl Resolve {
-    pub(crate) fn get(&self, input: &Input) -> Option<&Node> {
+    pub(crate) fn node(&self, node_id: &NodeId) -> Option<&Node> {
+        match node_id {
+            NodeId::Root => Some(&self.root),
+            NodeId::Node(name) => self.nodes.get(name),
+        }
+    }
+
+    pub(crate) fn resolve_id(&self, input: &Input) -> Option<NodeId> {
         match input {
-            Input::Direct(x) => self.nodes.get(x),
+            Input::Direct(x) => Some(NodeId::Node(x.clone())),
             Input::Follow(xs) => {
+                let mut node_id = NodeId::Root;
                 let mut node = &self.root;
+
                 for x in xs {
-                    node = self.get(node.inputs.get(x)?)?;
+                    let input = node.inputs.get(x)?;
+                    node_id = self.resolve_id(input)?;
+                    node = self.node(&node_id)?;
                 }
-                Some(node)
+
+                Some(node_id)
             }
         }
+    }
+
+    pub(crate) fn get(&self, input: &Input) -> Option<&Node> {
+        self.node(&self.resolve_id(input)?)
     }
 }
 
