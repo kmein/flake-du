@@ -15,7 +15,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
-          body: "[Changelog](https://github.com/nix-community/nix-melt/blob/main/CHANGELOG.md)"
+          body: "[Changelog](https://github.com/nix-community/flake-du/blob/main/CHANGELOG.md)"
 
   release:
     name: release
@@ -57,8 +57,8 @@ jobs:
         with:
           repo_token: ${{ github.token }}
           tag: ${{ github.ref }}
-          file: target/${{ matrix.target }}/release/nix-melt${{ matrix.ext }}
-          asset_name: nix-melt-${{ matrix.target }}${{ matrix.ext }}
+          file: target/${{ matrix.target }}/release/flake-du${{ matrix.ext }}
+          asset_name: flake-du-${{ matrix.target }}${{ matrix.ext }}
 
   artifacts:
     name: artifacts
@@ -82,8 +82,8 @@ jobs:
 
       - name: Rename generated artifacts
         run: |
-          mv artifacts/{_,}nix-melt.ps1
-          mv artifacts/{_nix-melt,nix-melt.zsh}
+          mv artifacts/{_,}flake-du.ps1
+          mv artifacts/{_flake-du,flake-du.zsh}
 
       - name: Upload artifacts
         uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # latest

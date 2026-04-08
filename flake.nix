@@ -42,7 +42,7 @@
         in
         {
           default = rustPlatform.buildRustPackage {
-            pname = "nix-melt";
+            pname = "flake-du";
             inherit ((importTOML (src + "/Cargo.toml")).package) version;
 
             inherit src;
@@ -60,8 +60,8 @@
             };
 
             postInstall = ''
-              installManPage artifacts/nix-melt.1
-              installShellCompletion artifacts/nix-melt.{bash,fish} --zsh artifacts/_nix-melt
+              installManPage artifacts/flake-du.1
+              installShellCompletion artifacts/flake-du.{bash,fish} --zsh artifacts/_flake-du
             '';
 
             meta = {
