@@ -1,14 +1,14 @@
 [package]
-name = "nix-melt"
+name = "flake-du"
 version = "0.1.3"
 authors = ["figsoda <figsoda@pm.me>"]
 edition = "2024"
-description = "A flake.lock viewer"
+description = "Display flake input dependency trees with store sizes"
 readme = "README.md"
-homepage = "https://github.com/nix-community/nix-melt"
-repository = "https://github.com/nix-community/nix-melt"
+homepage = "https://github.com/nix-community/flake-du"
+repository = "https://github.com/nix-community/flake-du"
 license = "MPL-2.0"
-keywords = ["cli", "flake", "nix", "viewer"]
+keywords = ["cli", "flake", "nix", "viewer", "du"]
 categories = ["command-line-utilities"]
 
 [dependencies]

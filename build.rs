@@ -19,11 +19,11 @@ fn main() {
         let cmd = &mut Opts::command();
 
         Man::new(cmd.clone())
-            .render(&mut File::create(out.join("nix-melt.1")).unwrap())
+            .render(&mut File::create(out.join("flake-du.1")).unwrap())
             .unwrap();
 
         for shell in Shell::value_variants() {
-            generate_to(*shell, cmd, "nix-melt", out).unwrap();
+            generate_to(*shell, cmd, "flake-du", out).unwrap();
         }
     }
 }
