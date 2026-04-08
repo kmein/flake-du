@@ -1,9 +1,6 @@
 mod cli;
-mod error;
 mod lock;
-mod pane;
 mod size;
-mod state;
 mod tree_view;
 
 use std::{
@@ -13,26 +10,19 @@ use std::{
 };
 
 use clap::Parser;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use eyre::Result;
-use time::format_description;
 
 use crate::{
-    cli::{Opts, PaneArgs, TreeArgs, ViewCommand},
+    cli::{Opts, TreeArgs},
     lock::Lock,
     size::SizeIndex,
-    state::State,
     tree_view::{TreeRenderOptions, render_tree_text},
 };
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = Opts::parse();
-    match opts.command {
-        Some(ViewCommand::Tree(args)) => run_tree(args),
-        Some(ViewCommand::Pane(args)) => run_tui(args),
-        None => run_tui(opts.args),
-    }
+    run_tree(opts.into())
 }
 
 fn run_tree(args: TreeArgs) -> Result<()> {
@@ -59,40 +49,6 @@ fn run_tree(args: TreeArgs) -> Result<()> {
 
     if let Some(err) = sizes.error() {
         eprintln!("size warning: {err}");
-    }
-
-    Ok(())
-}
-
-fn run_tui(args: PaneArgs) -> Result<()> {
-    let PaneArgs {
-        path_args,
-        time_format,
-    } = args;
-    let (lock_path, _) = resolve_paths(path_args.path);
-    let mut state = State::new(
-        read_lock(&lock_path)?,
-        format_description::parse_borrowed::<2>(&time_format)?,
-    )?;
-    state.render()?;
-
-    while let Ok(ev) = event::read() {
-        let Event::Key(KeyEvent {
-            code, modifiers, ..
-        }) = ev
-        else {
-            continue;
-        };
-
-        match code {
-            KeyCode::Char('q') => break,
-            KeyCode::Char('c') if modifiers == KeyModifiers::CONTROL => break,
-            KeyCode::Char('h') | KeyCode::Left => state.left()?,
-            KeyCode::Char('j') | KeyCode::Down => state.down()?,
-            KeyCode::Char('k') | KeyCode::Up => state.up()?,
-            KeyCode::Char('l') | KeyCode::Right => state.right()?,
-            _ => {}
-        }
     }
 
     Ok(())

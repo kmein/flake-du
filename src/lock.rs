@@ -45,7 +45,6 @@ pub(crate) enum Input {
 pub(crate) struct Locked {
     #[serde(rename = "type")]
     pub type_: String,
-    pub last_modified: Option<usize>,
     #[serde(flatten)]
     #[serde_as(as = "Map<_, _>")]
     pub fields: Vec<(String, Value)>,
