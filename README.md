@@ -18,7 +18,7 @@ nix run github:nix-community/nix-melt
 Usage: nix-melt [OPTIONS] [PATH]
 
 Arguments:
-  [PATH]  Path to the flake.lock or the directory containing flake.lock [default: flake.lock]
+  [PATH]  Directory containing flake.lock [default: .]
 
 Options:
       --no-self-size        Hide each input's own store size

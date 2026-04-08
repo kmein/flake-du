@@ -21,8 +21,8 @@ pub(crate) struct Opts {
 
 #[derive(Args)]
 pub(crate) struct PathArgs {
-    /// Path to the flake.lock or the directory containing flake.lock
-    #[arg(default_value = "flake.lock")]
+    /// Directory containing flake.lock
+    #[arg(default_value = ".")]
     pub path: PathBuf,
 }
 
