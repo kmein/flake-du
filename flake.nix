@@ -66,7 +66,7 @@
 
             meta = {
               license = licenses.mpl20;
-              maintainers = with maintainers; [ figsoda ];
+              maintainers = with maintainers; [ kmein ];
             };
           };
         }
