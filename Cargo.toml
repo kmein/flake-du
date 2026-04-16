@@ -1,6 +1,6 @@
 [package]
 name = "flake-du"
-version = "0.1.3"
+version = "0.1.0"
 authors = ["figsoda <figsoda@pm.me>"]
 edition = "2024"
 description = "Display flake input dependency trees with store sizes"
