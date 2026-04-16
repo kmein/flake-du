@@ -11,6 +11,7 @@ use crate::{
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TreeRenderOptions {
     pub show_cumulative_size: bool,
+    pub show_store_paths: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -102,12 +103,24 @@ fn tree_label(
         .map(|suffix| format!(" {suffix}"))
         .unwrap_or_default();
 
+    let path_suffix = if options.show_store_paths {
+        match input {
+            Input::Direct(_) => lock.resolve_id(input).as_ref()
+                .and_then(|node_id| sizes.path(node_id))
+                .map(|path| format!(" \x1b[90m({path})\x1b[0m"))
+                .unwrap_or_default(),
+            Input::Follow(_) => String::new(),
+        }
+    } else {
+        String::new()
+    };
+
     match input {
         Input::Direct(x) => {
             if x == name {
-                format!("{name}{suffix}")
+                format!("{name}{suffix}{path_suffix}")
             } else {
-                format!("{name}: {x}{suffix}")
+                format!("{name}: {x}{suffix}{path_suffix}")
             }
         }
         Input::Follow(xs) => {
@@ -117,7 +130,7 @@ fn tree_label(
                 xs.join("/")
             };
 
-            format!("{name} -> {target}{suffix}")
+            format!("{name} -> {target}{suffix}{path_suffix}")
         }
     }
 }
@@ -265,6 +278,7 @@ mod tests {
             &sizes,
             TreeRenderOptions {
                 show_cumulative_size: true,
+                show_store_paths: false,
             },
         )
         .unwrap();
@@ -297,6 +311,7 @@ mod tests {
             &sizes,
             TreeRenderOptions {
                 show_cumulative_size: false,
+                show_store_paths: false,
             },
         )
         .unwrap();

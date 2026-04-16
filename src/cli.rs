@@ -10,6 +10,10 @@ pub(crate) struct Opts {
     #[command(flatten)]
     pub path_args: PathArgs,
 
+    /// Show store paths for each input
+    #[arg(long)]
+    pub show_store_paths: bool,
+
     /// Hide cumulative subtree sizes
     #[arg(long)]
     pub no_cumulative_size: bool,
