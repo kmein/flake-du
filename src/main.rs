@@ -37,7 +37,6 @@ fn main() -> Result<()> {
 fn run_tree(args: Opts) -> Result<()> {
     let Opts {
         path_args,
-        no_self_size,
         no_cumulative_size,
     } = args;
     let flake_path = path_args.path;
@@ -77,7 +76,6 @@ fn run_tree(args: Opts) -> Result<()> {
         &lock,
         &sizes,
         TreeRenderOptions {
-            show_self_size: !no_self_size,
             show_cumulative_size: !no_cumulative_size,
         },
     )?;

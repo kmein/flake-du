@@ -10,7 +10,6 @@ use crate::{
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TreeRenderOptions {
-    pub show_self_size: bool,
     pub show_cumulative_size: bool,
 }
 
@@ -130,11 +129,9 @@ fn format_size_suffix(
 ) -> Option<String> {
     let mut parts = Vec::new();
 
-    if options.show_self_size {
-        parts.push(format_bytes(own_size));
-    }
+    parts.push(format_bytes(own_size));
 
-    if options.show_cumulative_size && (!options.show_self_size || own_size != total_estimate.to_option()) {
+    if options.show_cumulative_size && own_size != total_estimate.to_option() {
         parts.push(format!("Σ {}", format_size_estimate(total_estimate)));
     }
 
@@ -267,7 +264,6 @@ mod tests {
             &lock,
             &sizes,
             TreeRenderOptions {
-                show_self_size: true,
                 show_cumulative_size: true,
             },
         )
@@ -300,7 +296,6 @@ mod tests {
             &lock,
             &sizes,
             TreeRenderOptions {
-                show_self_size: true,
                 show_cumulative_size: false,
             },
         )
