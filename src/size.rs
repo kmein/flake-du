@@ -8,7 +8,7 @@ use eyre::{Context, Result, eyre};
 use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::lock::{Input, Locked, NodeId, Resolve};
 
@@ -132,7 +132,9 @@ fn archive_flake(flake_path: &Path, lock_path: &Path) -> Result<ArchivedFlake> {
         .with_context(|| format!("failed to run nix flake archive for {}", flake_path.display()))?;
 
     if !output.status.success() {
-        return Err(eyre!("nix flake archive failed: {}", summarize_nix_stderr(&output.stderr)));
+        let err = summarize_nix_stderr(&output.stderr);
+        warn!("nix flake archive failed: {}", err);
+        return Err(eyre!("nix flake archive failed: {}", err));
     }
 
     decode_nix_json(&output.stdout, "failed to decode nix flake archive output")
@@ -185,7 +187,13 @@ fn load_sizes(lock: &Resolve, by_node: &mut HashMap<NodeId, String>) -> Result<L
     };
 
     let mut failures = Vec::new();
-    for node_ids in missing_node_groups(by_node, &sizes).into_values() {
+    let missing_groups = missing_node_groups(by_node, &sizes);
+    
+    if !missing_groups.is_empty() {
+        debug!("fetching {} missing node groups individually", missing_groups.len());
+    }
+
+    for node_ids in missing_groups.into_values() {
         let Some(node_id) = node_ids.first().cloned() else {
             continue;
         };
@@ -193,6 +201,7 @@ fn load_sizes(lock: &Resolve, by_node: &mut HashMap<NodeId, String>) -> Result<L
         let realized_path = match realize_node_path(lock, &node_id) {
             Ok(path) => path,
             Err(err) => {
+                warn!("failed to realize node path for {:?}: {}", node_id, err);
                 failures.push(err.to_string());
                 continue;
             }
@@ -206,11 +215,16 @@ fn load_sizes(lock: &Resolve, by_node: &mut HashMap<NodeId, String>) -> Result<L
             Ok(info) if !info.sizes.is_empty() => {
                 sizes.extend(info.sizes);
             }
-            Ok(info) => failures.push(
-                info.warning
-                    .unwrap_or_else(|| "failed to query realized input size".to_string()),
-            ),
-            Err(err) => failures.push(err.to_string()),
+            Ok(info) => {
+                let msg = info.warning
+                    .unwrap_or_else(|| "failed to query realized input size".to_string());
+                warn!("query_path_info for realized path returned success but with warning: {}", msg);
+                failures.push(msg);
+            }
+            Err(err) => {
+                warn!("query_path_info failed for realized path: {}", err);
+                failures.push(err.to_string());
+            }
         }
     }
 
@@ -242,7 +256,9 @@ fn query_path_info(paths: &[String]) -> Result<QueryPathInfo> {
         .context("failed to run nix path-info")?;
 
     if !output.status.success() {
-        return Err(eyre!("nix path-info failed: {}", summarize_nix_stderr(&output.stderr)));
+        let err = summarize_nix_stderr(&output.stderr);
+        warn!("nix path-info failed: {}", err);
+        return Err(eyre!("nix path-info failed: {}", err));
     }
 
     let (sizes, missing) = if let Ok(array) = decode_nix_json::<Vec<PathInfo>>(&output.stdout, "failed to decode nix path-info output (array format)") {
@@ -343,9 +359,10 @@ fn realize_locked_path(locked: &Locked) -> Result<String> {
         .context("failed to run nix eval for builtins.fetchTree")?;
 
     if !output.status.success() {
+        let err = summarize_nix_stderr(&output.stderr);
+        warn!("nix fetchTree failed: {}", err);
         return Err(eyre!(
-            "nix fetchTree failed: {}",
-            summarize_nix_stderr(&output.stderr)
+            "nix fetchTree failed: {}", err
         ));
     }
 

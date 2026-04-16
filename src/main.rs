@@ -13,6 +13,8 @@ use clap::Parser;
 use eyre::Result;
 use tracing_subscriber::{EnvFilter, fmt};
 
+use tracing::{debug, warn};
+
 use crate::{
     cli::Opts,
     lock::Lock,
@@ -39,8 +41,13 @@ fn run_tree(args: Opts) -> Result<()> {
     } = args;
     let flake_path = path_args.path;
     let lock_path = flake_path.join("flake.lock");
+    debug!("reading lock file from {}", lock_path.display());
     let lock = read_lock(&lock_path)?.resolve()?;
+    
+    debug!("computing size index");
     let sizes = SizeIndex::load(&lock, &flake_path, &lock_path);
+    
+    debug!("rendering tree");
     let tree = render_tree_text(
         &lock,
         &sizes,
@@ -54,6 +61,7 @@ fn run_tree(args: Opts) -> Result<()> {
     io::stdout().flush()?;
 
     if let Some(err) = sizes.error() {
+        warn!("size warning: {err}");
         eprintln!("size warning: {err}");
     }
 
