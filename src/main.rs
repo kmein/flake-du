@@ -13,7 +13,7 @@ use clap::Parser;
 use eyre::Result;
 
 use crate::{
-    cli::{Opts, TreeArgs},
+    cli::Opts,
     lock::Lock,
     size::SizeIndex,
     tree_view::{TreeRenderOptions, render_tree_text},
@@ -22,11 +22,11 @@ use crate::{
 fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = Opts::parse();
-    run_tree(opts.into())
+    run_tree(opts)
 }
 
-fn run_tree(args: TreeArgs) -> Result<()> {
-    let TreeArgs {
+fn run_tree(args: Opts) -> Result<()> {
+    let Opts {
         path_args,
         no_self_size,
         no_cumulative_size,
