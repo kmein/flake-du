@@ -37,38 +37,57 @@
 
           inherit (pkgs)
             installShellFiles
+            makeWrapper
             rustPlatform
             ;
         in
         {
-          default = rustPlatform.buildRustPackage {
-            pname = "flake-du";
-            inherit ((importTOML (src + "/Cargo.toml")).package) version;
+          default = pkgs.callPackage (
+            {
+              lib,
+              rustPlatform,
+              installShellFiles,
+              makeWrapper,
+              useLix ? true,
+              lix,
+              nix,
+            }:
+            rustPlatform.buildRustPackage {
+              pname = "flake-du";
+              inherit ((importTOML (src + "/Cargo.toml")).package) version;
 
-            inherit src;
+              inherit src;
 
-            cargoLock = {
-              lockFile = src + "/Cargo.lock";
-            };
+              cargoLock = {
+                lockFile = src + "/Cargo.lock";
+              };
 
-            nativeBuildInputs = [
-              installShellFiles
-            ];
+              nativeBuildInputs = [
+                installShellFiles
+                makeWrapper
+              ];
 
-            env = {
-              GEN_ARTIFACTS = "artifacts";
-            };
+              env = {
+                GEN_ARTIFACTS = "artifacts";
+              };
 
-            postInstall = ''
-              installManPage artifacts/flake-du.1
-              installShellCompletion artifacts/flake-du.{bash,fish} --zsh artifacts/_flake-du
-            '';
+              postInstall = ''
+                installManPage artifacts/flake-du.1
+                installShellCompletion artifacts/flake-du.{bash,fish} --zsh artifacts/_flake-du
+                
+                # We default to lix to sidestep CppNix's issue where 
+                # builtins.fetchTree downloads locked inputs even if they
+                # are already cached in the store. Using lix avoids this.
+                wrapProgram $out/bin/flake-du \
+                  --prefix PATH : ${lib.makeBinPath [ (if useLix then lix else nix) ]}
+              '';
 
-            meta = {
-              license = licenses.mpl20;
-              maintainers = with maintainers; [ kmein ];
-            };
-          };
+              meta = {
+                license = licenses.mpl20;
+                maintainers = with maintainers; [ kmein ];
+              };
+            }
+          ) { };
         }
       );
     };
