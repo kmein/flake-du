@@ -8,23 +8,29 @@ use serde::Deserialize;
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 use serde_with::{Map, serde_as};
 
+/// A fully resolved flake lockfile where the root node is separated from the rest of the nodes.
 pub(crate) struct Resolve {
     pub root: Node,
     pub nodes: IndexMap<String, Node, BuildHasherDefault<FxHasher>>,
 }
 
+/// Identifies a specific node in the flake lockfile.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) enum NodeId {
+    /// The root flake itself.
     Root,
+    /// A named dependency node.
     Node(String),
 }
 
+/// Raw representation of a parsed `flake.lock` file.
 #[derive(Deserialize)]
 pub(crate) struct Lock {
     pub root: String,
     pub nodes: IndexMap<String, Node, BuildHasherDefault<FxHasher>>,
 }
 
+/// A node in the flake lockfile graph, representing a single input and its dependencies.
 #[derive(Deserialize)]
 pub(crate) struct Node {
     #[serde(default)]
@@ -32,24 +38,31 @@ pub(crate) struct Node {
     pub locked: Option<Locked>,
 }
 
+/// Represents a dependency reference from one node to another.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub(crate) enum Input {
+    /// A direct reference to a node by its key.
     Direct(String),
+    /// An alias following a path of inputs (e.g. `["nixpkgs"]`).
     Follow(Vec<String>),
 }
 
+/// The exact pinned source information for a flake input.
 #[serde_as]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Locked {
+    /// The type of the input (e.g., `github`, `git`, `path`).
     #[serde(rename = "type")]
     pub type_: String,
+    /// The remaining fields specifying the exact locked revision/hash.
     #[serde(flatten)]
     #[serde_as(as = "Map<_, _>")]
     pub fields: Vec<(String, Value)>,
 }
 
+/// A primitive value in a locked input's field.
 #[derive(Deserialize, Display)]
 #[serde(untagged)]
 #[display("{0}")]
