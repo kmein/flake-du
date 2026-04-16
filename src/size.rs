@@ -36,6 +36,7 @@ struct PathInfo {
     path: Option<String>,
     closure_size: Option<u64>,
     nar_size: Option<u64>,
+    valid: Option<bool>,
 }
 
 impl SizeIndex {
@@ -242,9 +243,10 @@ fn query_path_info(paths: &[String]) -> Result<QueryPathInfo> {
     }
 
     let (sizes, missing) = if let Ok(array) = decode_nix_json::<Vec<PathInfo>>(&output.stdout, "failed to decode nix path-info output (array format)") {
-        let missing = array.iter().filter(|info| info.path.is_none()).count();
+        let missing = array.iter().filter(|info| info.path.is_none() || info.valid == Some(false)).count();
         let sizes = array
             .into_iter()
+            .filter(|info| info.valid != Some(false))
             .filter_map(|mut info| info.path.take().map(|path| (path, info)))
             .collect::<HashMap<_, _>>();
         (sizes, missing)
@@ -253,10 +255,10 @@ fn query_path_info(paths: &[String]) -> Result<QueryPathInfo> {
             &output.stdout,
             "failed to decode nix path-info output (object format)",
         )?;
-        let missing = decoded.values().filter(|info| info.is_none()).count();
+        let missing = decoded.values().filter(|info| info.as_ref().map_or(true, |info| info.valid == Some(false))).count();
         let sizes = decoded
             .into_iter()
-            .filter_map(|(path, info)| info.map(|info| (path, info)))
+            .filter_map(|(path, info)| info.filter(|info| info.valid != Some(false)).map(|info| (path, info)))
             .collect::<HashMap<_, _>>();
         (sizes, missing)
     };
