@@ -7,10 +7,11 @@ use std::{
     fs::File,
     io::{self, Write},
     path::Path,
+    process::Command,
 };
 
 use clap::Parser;
-use eyre::Result;
+use eyre::{Context, Result};
 use tracing_subscriber::{EnvFilter, fmt};
 
 use tracing::{debug, warn};
@@ -40,7 +41,31 @@ fn run_tree(args: Opts) -> Result<()> {
         no_cumulative_size,
     } = args;
     let flake_path = path_args.path;
-    let lock_path = flake_path.join("flake.lock");
+    let is_remote = !flake_path.exists() && (flake_path.to_string_lossy().contains(':') || flake_path.to_string_lossy().starts_with("flake:"));
+
+    let lock_path = if is_remote {
+        debug!("fetching remote flake metadata to find lockfile");
+        let output = Command::new("nix")
+            .arg("--quiet")
+            .args(["flake", "metadata", "--json"])
+            .arg(&flake_path)
+            .output()
+            .context("failed to run nix flake metadata")?;
+
+        if !output.status.success() {
+            eyre::bail!("failed to fetch remote flake metadata");
+        }
+
+        let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        let path = metadata.get("path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| eyre::eyre!("missing path in remote flake metadata"))?;
+        
+        std::path::PathBuf::from(path).join("flake.lock")
+    } else {
+        flake_path.join("flake.lock")
+    };
+
     debug!("reading lock file from {}", lock_path.display());
     let lock = read_lock(&lock_path)?.resolve()?;
     
