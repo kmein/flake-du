@@ -11,6 +11,7 @@ use std::{
 
 use clap::Parser;
 use eyre::Result;
+use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::{
     cli::Opts,
@@ -21,6 +22,11 @@ use crate::{
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+    fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(io::stderr)
+        .init();
+
     let opts = Opts::parse();
     run_tree(opts)
 }

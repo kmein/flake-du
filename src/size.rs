@@ -8,6 +8,7 @@ use eyre::{Context, Result, eyre};
 use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use tracing::debug;
 
 use crate::lock::{Input, Locked, NodeId, Resolve};
 
@@ -113,6 +114,7 @@ impl SizeIndex {
 }
 
 fn archive_flake(flake_path: &Path, lock_path: &Path) -> Result<ArchivedFlake> {
+    debug!("running nix flake archive on {}", flake_path.display());
     let output = Command::new("nix")
         .arg("--quiet")
         .args([
@@ -231,6 +233,7 @@ fn load_sizes(lock: &Resolve, by_node: &mut HashMap<NodeId, String>) -> Result<L
 }
 
 fn query_path_info(paths: &[String]) -> Result<QueryPathInfo> {
+    debug!("running nix path-info on {} paths", paths.len());
     let output = Command::new("nix")
         .arg("--quiet")
         .args(["path-info", "--json", "--closure-size"])
@@ -331,6 +334,7 @@ fn realize_locked_path(locked: &Locked) -> Result<String> {
         serde_json::to_string(&spec).context("failed to escape fetchTree input specification")?
     );
 
+    debug!("realizing missing input {} with builtins.fetchTree", spec);
     let output = Command::new("nix")
         .arg("--quiet")
         .args(["eval", "--raw", "--expr"])
