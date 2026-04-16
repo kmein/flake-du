@@ -36,7 +36,6 @@
           ];
 
           inherit (pkgs)
-            installShellFiles
             makeWrapper
             rustPlatform
             ;
@@ -46,7 +45,6 @@
             {
               lib,
               rustPlatform,
-              installShellFiles,
               makeWrapper,
               useLix ? true,
               lix,
@@ -63,18 +61,10 @@
               };
 
               nativeBuildInputs = [
-                installShellFiles
                 makeWrapper
               ];
 
-              env = {
-                GEN_ARTIFACTS = "artifacts";
-              };
-
               postInstall = ''
-                installManPage artifacts/flake-du.1
-                installShellCompletion artifacts/flake-du.{bash,fish} --zsh artifacts/_flake-du
-                
                 # We default to lix to sidestep CppNix's issue where 
                 # builtins.fetchTree downloads locked inputs even if they
                 # are already cached in the store. Using lix avoids this.
