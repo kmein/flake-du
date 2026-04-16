@@ -12,12 +12,16 @@ use tracing::{debug, warn};
 
 use crate::lock::{Input, Locked, NodeId, Resolve};
 
+/// A representation of the computed Nix store size metrics for a node.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct NodeSize {
+    /// The computed hash or path of the input source tree in the Nix store.
     pub path: Option<String>,
+    /// The size of the closure downloaded to evaluate this node, in bytes.
     pub size: Option<u64>,
 }
 
+/// An index built by examining the exact derivations/nix store paths the locked inputs fetch.
 #[derive(Default)]
 pub(crate) struct SizeIndex {
     by_node: HashMap<NodeId, NodeSize>,
@@ -374,6 +378,7 @@ fn realize_locked_path(locked: &Locked) -> Result<String> {
     }
 }
 
+/// Formats the size into human-readable bytes (e.g. `14.2 MiB`).
 pub(crate) fn format_bytes(size: Option<u64>) -> String {
     let Some(size) = size else {
         return "?".to_string();

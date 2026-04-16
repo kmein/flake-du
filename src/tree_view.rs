@@ -8,15 +8,21 @@ use crate::{
     size::{SizeIndex, format_bytes},
 };
 
+/// Render options for the output CLI tree view.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TreeRenderOptions {
+    /// Whether to display cumulative subtree sizes.
     pub show_cumulative_size: bool,
+    /// Whether to display the Nix store path mappings inline.
     pub show_store_paths: bool,
 }
 
+/// Represents the calculated tree size metrics (exact sum, or minimum estimate).
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct SizeEstimate {
+    /// The computed total size.
     known: u64,
+    /// If true, some subtree sizes were unknown or missing, meaning `known` is a minimum bound.
     has_unknown: bool,
 }
 
@@ -30,6 +36,7 @@ impl SizeEstimate {
     }
 }
 
+/// Helper method to create a string graph representing the resolved nodes and their dependencies.
 pub(crate) fn render_tree_text(
     lock: &Resolve,
     sizes: &SizeIndex,
@@ -159,6 +166,7 @@ fn format_size_estimate(estimate: SizeEstimate) -> String {
     }
 }
 
+/// Recursively evaluates the store size of the locked root flake and its descendants.
 pub(crate) fn subtree_size(
     lock: &Resolve,
     sizes: &SizeIndex,
