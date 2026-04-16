@@ -53,6 +53,7 @@ Arguments:
   [PATH]  Directory containing flake.lock [default: .]
 
 Options:
+      --show-store-paths    Show store paths for each input
       --no-cumulative-size  Hide cumulative subtree sizes
   -h, --help                Print help
   -V, --version             Print version
@@ -60,7 +61,7 @@ Options:
 
 `flake-du` prints a recursive tree to stdout and exits, so it can be piped or redirected. Any size warning is written to stderr.
 
-By default, the tree shows each input's own store size and its cumulative subtree size. You can hide the cumulative total column with `--no-cumulative-size`.
+By default, the tree shows each input's own store size and its cumulative subtree size. You can hide the cumulative total column with `--no-cumulative-size`. You can also include the exact nix store path to each input by passing `--show-store-paths`.
 
 The tree view shows the Nix store size of each locked flake input. `follows` edges are aliases, so they always show `0 B`. Cumulative totals (marked with Σ) are deduplicated by store path, so shared inputs do not inflate subtree totals. When some sizes are unknown, ranges are shown with `≥`. Inputs are sorted by descending size.
 
