@@ -35,6 +35,8 @@ The tree view shows the Nix store size of each locked flake input. `follows` edg
 
 To compute sizes, `flake-du` first resolves store paths from `nix flake archive --dry-run` and then fetches any missing locked inputs individually with `builtins.fetchTree`.
 
+**Note:** The flake output by default wraps `flake-du` with `lix` instead of `nix` to compute sizes. This prevents the issue in CppNix where `builtins.fetchTree` re-downloads locked inputs even if they are already in the store. You can switch back to `nix` by passing `useLix = false;` when building the package.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md)
