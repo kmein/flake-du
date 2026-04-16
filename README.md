@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/badge/license-MPL--2.0-blue?style=flat-square)](https://www.mozilla.org/en-US/MPL/2.0)
 [![ci](https://img.shields.io/github/actions/workflow/status/kmein/flake-du/ci.yml?label=ci&logo=github-actions&style=flat-square)](https://github.com/kmein/flake-du/actions/workflows/ci.yml)
 
-A flake.lock viewer that shows disk usage. Originally based on [nix-melt](https://github.com/nix-community/nix-melt).
+A flake.lock viewer that shows disk usage, sorted by size. Designed to be used in conjunction with tools like [`flake-edit follow`](https://github.com/a-kenji/flake-edit?tab=readme-ov-file#-flake-edit-follow) to help deduplicate and optimize your flake inputs. Originally based on [nix-melt](https://github.com/nix-community/nix-melt).
 
 ## Usage
 

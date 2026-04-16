@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser};
 
-/// A flake.lock viewer that shows disk usage
+/// A flake.lock viewer that shows disk usage, sorted by size.
 /// {n}https://github.com/nix-community/flake-du
 #[derive(Parser)]
 #[command(version)]
