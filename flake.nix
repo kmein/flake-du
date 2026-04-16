@@ -30,15 +30,9 @@
         pkgs:
         let
           src = sourceByRegex self [
-            "(src|tests)(/.*)?"
+            "(src)(/.*)?"
             ''Cargo\.(toml|lock)''
-            ''build\.rs''
           ];
-
-          inherit (pkgs)
-            makeWrapper
-            rustPlatform
-            ;
         in
         {
           default = pkgs.callPackage (
@@ -65,7 +59,7 @@
               ];
 
               postInstall = ''
-                # We default to lix to sidestep CppNix's issue where 
+                # We default to lix to sidestep CppNix's issue where
                 # builtins.fetchTree downloads locked inputs even if they
                 # are already cached in the store. Using lix avoids this.
                 wrapProgram $out/bin/flake-du \
