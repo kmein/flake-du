@@ -327,4 +327,37 @@ mod tests {
         assert!(rendered.contains("└─ base [42 B]"));
         assert!(!rendered.contains(", "));
     }
+
+    #[test]
+    fn can_show_store_paths() {
+        let lock = Resolve {
+            root: Node {
+                inputs: IndexMap::from_iter([
+                    ("alias".to_string(), Input::Follow(vec!["base".to_string()])),
+                    ("base".to_string(), Input::Direct("base".to_string())),
+                ]),
+                locked: None,
+            },
+            nodes: IndexMap::from_iter([(
+                "base".to_string(),
+                Node {
+                    inputs: Default::default(),
+                    locked: None,
+                },
+            )]),
+        };
+        let sizes = SizeIndex::from_test_sizes([("base", "/nix/store/a", 500)]);
+
+        let rendered = render_tree_text(
+            &lock,
+            &sizes,
+            TreeRenderOptions {
+                show_cumulative_size: false,
+                show_store_paths: true,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(rendered, "inputs\n├─ base [500 B] \x1b[90m(/nix/store/a)\x1b[0m\n└─ alias -> base [0 B]\n");
+    }
 }
