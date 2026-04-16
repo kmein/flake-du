@@ -23,6 +23,7 @@ use crate::{
     tree_view::{TreeRenderOptions, render_tree_text},
 };
 
+/// Entry point for the CLI application.
 fn main() -> Result<()> {
     color_eyre::install()?;
     fmt()
@@ -34,6 +35,7 @@ fn main() -> Result<()> {
     run_tree(opts)
 }
 
+/// Core logic for resolving the flake lock, gathering sizes, and rendering the tree.
 fn run_tree(args: Opts) -> Result<()> {
     let Opts {
         path_args,
@@ -93,6 +95,7 @@ fn run_tree(args: Opts) -> Result<()> {
     Ok(())
 }
 
+/// Parses the `flake.lock` JSON file into the internal `Lock` representation.
 fn read_lock(lock_path: &Path) -> Result<Lock> {
     Ok(serde_json::from_reader(File::open(lock_path)?)?)
 }

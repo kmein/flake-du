@@ -73,6 +73,7 @@ pub enum Value {
 }
 
 impl Locked {
+    /// Transforms the dependency metadata into a JSON object compatible with `builtins.fetchTree`.
     pub(crate) fn fetch_tree_spec(&self) -> JsonMap<String, JsonValue> {
         let mut spec = JsonMap::new();
         spec.insert("type".to_string(), JsonValue::String(self.type_.clone()));
@@ -100,6 +101,7 @@ impl Value {
 }
 
 impl Resolve {
+    /// Returns a specific node in the lockfile by its `NodeId`.
     pub(crate) fn node(&self, node_id: &NodeId) -> Option<&Node> {
         match node_id {
             NodeId::Root => Some(&self.root),
@@ -107,6 +109,7 @@ impl Resolve {
         }
     }
 
+    /// Resolves a dependency reference (`Input`) into a specific `NodeId` in the graph.
     pub(crate) fn resolve_id(&self, input: &Input) -> Option<NodeId> {
         match input {
             Input::Direct(x) => Some(NodeId::Node(x.clone())),
@@ -125,12 +128,14 @@ impl Resolve {
         }
     }
 
+    /// Convenience method to resolve an `Input` reference directly to its target `Node`.
     pub(crate) fn get(&self, input: &Input) -> Option<&Node> {
         self.node(&self.resolve_id(input)?)
     }
 }
 
 impl Lock {
+    /// Resolves the raw lockfile structure into a traversable graph.
     pub(crate) fn resolve(mut self) -> Result<Resolve> {
         Ok(Resolve {
             root: self
