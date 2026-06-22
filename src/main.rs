@@ -19,7 +19,7 @@ use tracing::{debug, warn};
 use crate::{
     cli::Opts,
     lock::Lock,
-    size::SizeIndex,
+    size::{SizeIndex, dedup_candidates, format_bytes},
     tree_view::{TreeRenderOptions, render_tree_text},
 };
 
@@ -41,6 +41,7 @@ fn run_tree(args: Opts) -> Result<()> {
         path_args,
         show_store_paths,
         no_cumulative_size,
+        no_dedup_hint,
     } = args;
     let flake_path = path_args.path;
     let is_remote = !flake_path.exists() && (flake_path.to_string_lossy().contains(':') || flake_path.to_string_lossy().starts_with("flake:"));
@@ -90,6 +91,25 @@ fn run_tree(args: Opts) -> Result<()> {
     if let Some(err) = sizes.error() {
         warn!("size warning: {err}");
         eprintln!("size warning: {err}");
+    }
+
+    if !no_dedup_hint {
+        let groups = dedup_candidates(&lock, &sizes);
+        if !groups.is_empty() {
+            eprintln!();
+            eprintln!("deduplication candidates:");
+            for group in &groups {
+                let savings = match group.recoverable_bytes {
+                    Some(bytes) if bytes > 0 => {
+                        format!(" — recoverable ~{}", format_bytes(Some(bytes)))
+                    }
+                    _ => String::new(),
+                };
+                eprintln!("- {} ×{}{}", group.base_name, group.members.len(), savings);
+            }
+            eprintln!();
+            eprintln!("run: nix run nixpkgs#flake-edit -- follow");
+        }
     }
 
     Ok(())

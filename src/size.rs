@@ -399,6 +399,71 @@ fn realize_locked_path(locked: &Locked) -> Result<String> {
     }
 }
 
+/// A group of lock nodes that share a base input name (e.g. `nixpkgs`,
+/// `nixpkgs_2`, `nixpkgs_3`) and could be unified via `flake-edit follow`.
+pub(crate) struct DedupGroup {
+    pub base_name: String,
+    pub members: Vec<String>,
+    /// Total size of all members except the unsuffixed one (which `flake-edit
+    /// follow` would keep). `None` if any member's size is unknown.
+    pub recoverable_bytes: Option<u64>,
+}
+
+/// Identifies duplicate inputs in the lock file using Nix's `_N` suffix
+/// convention. Only reports groups where the unsuffixed base is present, since
+/// that's what `flake-edit follow` needs as a follow target.
+pub(crate) fn dedup_candidates(lock: &Resolve, sizes: &SizeIndex) -> Vec<DedupGroup> {
+    let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for name in lock.nodes.keys() {
+        groups
+            .entry(strip_dedup_suffix(name).to_owned())
+            .or_default()
+            .push(name.clone());
+    }
+
+    let mut out = Vec::new();
+    for (base, members) in groups {
+        if members.len() < 2 || !members.iter().any(|n| n == &base) {
+            continue;
+        }
+
+        let mut recoverable = Some(0u64);
+        for name in &members {
+            if name == &base {
+                continue;
+            }
+            match sizes.size(&NodeId::Node(name.clone())) {
+                Some(size) => {
+                    if let Some(acc) = recoverable.as_mut() {
+                        *acc += size;
+                    }
+                }
+                None => recoverable = None,
+            }
+        }
+
+        out.push(DedupGroup {
+            base_name: base,
+            members,
+            recoverable_bytes: recoverable,
+        });
+    }
+
+    out.sort_by(|a, b| b.recoverable_bytes.cmp(&a.recoverable_bytes));
+    out
+}
+
+fn strip_dedup_suffix(name: &str) -> &str {
+    let trimmed = name.trim_end_matches(|c: char| c.is_ascii_digit());
+    if trimmed.len() == name.len() {
+        return name;
+    }
+    trimmed
+        .strip_suffix('_')
+        .filter(|base| !base.is_empty())
+        .unwrap_or(name)
+}
+
 /// Formats the size into human-readable bytes (e.g. `14.2 MiB`).
 pub(crate) fn format_bytes(size: Option<u64>) -> String {
     let Some(size) = size else {
@@ -494,8 +559,8 @@ mod tests {
     use rustc_hash::FxHasher;
 
     use super::{
-        ArchivedFlake, collect_paths, decode_nix_json, format_bytes, summarize_missing_path_info,
-        summarize_nix_stderr,
+        ArchivedFlake, SizeIndex, collect_paths, dedup_candidates, decode_nix_json, format_bytes,
+        strip_dedup_suffix, summarize_missing_path_info, summarize_nix_stderr,
     };
     use crate::lock::{Input, Locked, Node, Resolve, Value};
 
@@ -564,6 +629,61 @@ mod tests {
             fields: vec![("rev".to_string(), Value::String("deadbeef".to_string()))],
         };
         assert!(!github.is_mutable());
+    }
+
+    #[test]
+    fn strips_nix_dedup_suffix() {
+        assert_eq!(strip_dedup_suffix("nixpkgs"), "nixpkgs");
+        assert_eq!(strip_dedup_suffix("nixpkgs_2"), "nixpkgs");
+        assert_eq!(strip_dedup_suffix("flake-parts_10"), "flake-parts");
+        assert_eq!(strip_dedup_suffix("base16-vim"), "base16-vim");
+        assert_eq!(strip_dedup_suffix("_2"), "_2");
+        assert_eq!(strip_dedup_suffix("name_"), "name_");
+    }
+
+    #[test]
+    fn dedup_candidates_groups_suffixed_duplicates() {
+        let lock = Resolve {
+            root: Node {
+                inputs: IndexMap::<String, Input, BuildHasherDefault<FxHasher>>::default(),
+                locked: None,
+            },
+            nodes: IndexMap::from_iter([
+                (
+                    "nixpkgs".to_string(),
+                    Node {
+                        inputs: IndexMap::<String, Input, BuildHasherDefault<FxHasher>>::default(),
+                        locked: None,
+                    },
+                ),
+                (
+                    "nixpkgs_2".to_string(),
+                    Node {
+                        inputs: IndexMap::<String, Input, BuildHasherDefault<FxHasher>>::default(),
+                        locked: None,
+                    },
+                ),
+                (
+                    "orphan_3".to_string(),
+                    Node {
+                        inputs: IndexMap::<String, Input, BuildHasherDefault<FxHasher>>::default(),
+                        locked: None,
+                    },
+                ),
+            ]),
+        };
+        let sizes = SizeIndex::from_test_sizes([
+            ("nixpkgs", "/nix/store/a", 100),
+            ("nixpkgs_2", "/nix/store/b", 250),
+            ("orphan_3", "/nix/store/c", 999),
+        ]);
+
+        let groups = dedup_candidates(&lock, &sizes);
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].base_name, "nixpkgs");
+        assert_eq!(groups[0].members.len(), 2);
+        assert_eq!(groups[0].recoverable_bytes, Some(250));
     }
 
     #[test]

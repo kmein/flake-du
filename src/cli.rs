@@ -17,6 +17,10 @@ pub(crate) struct Opts {
     /// Hide cumulative subtree sizes
     #[arg(long)]
     pub no_cumulative_size: bool,
+
+    /// Hide the deduplication candidates summary
+    #[arg(long)]
+    pub no_dedup_hint: bool,
 }
 
 #[derive(Args)]
