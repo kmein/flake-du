@@ -56,10 +56,31 @@ impl SizeIndex {
     }
 
     fn try_load(lock: &Resolve, flake_path: &Path, lock_path: &Path) -> Result<Self> {
-        let archived = archive_flake(flake_path, lock_path)?;
         let mut by_node = HashMap::new();
-
-        collect_paths(lock, &Input::Follow(Vec::new()), &archived, &mut by_node);
+        let archive_warning = match archive_flake(flake_path, lock_path) {
+            Ok(archived) => {
+                collect_paths(lock, &Input::Follow(Vec::new()), &archived, &mut by_node);
+                None
+            }
+            Err(err) => {
+                warn!("falling back to per-input realization: {}", err);
+                for (name, node) in &lock.nodes {
+                    let Some(locked) = node.locked.as_ref() else {
+                        continue;
+                    };
+                    if locked.is_mutable() {
+                        continue;
+                    }
+                    match realize_locked_path(locked) {
+                        Ok(path) => {
+                            by_node.insert(NodeId::Node(name.clone()), path);
+                        }
+                        Err(err) => warn!("failed to realize {}: {}", name, err),
+                    }
+                }
+                Some(err.to_string())
+            }
+        };
 
         let loaded = load_sizes(lock, &mut by_node)?;
 
@@ -81,7 +102,7 @@ impl SizeIndex {
                     )
                 })
                 .collect(),
-            error: loaded.warning,
+            error: archive_warning.or(loaded.warning),
         })
     }
 
@@ -476,7 +497,7 @@ mod tests {
         ArchivedFlake, collect_paths, decode_nix_json, format_bytes, summarize_missing_path_info,
         summarize_nix_stderr,
     };
-    use crate::lock::{Input, Node, Resolve};
+    use crate::lock::{Input, Locked, Node, Resolve, Value};
 
     #[test]
     fn keeps_direct_paths_when_a_follow_alias_is_missing_from_archive_json() {
@@ -516,6 +537,33 @@ mod tests {
             Some(&"/nix/store/base-source".to_string())
         );
         assert_eq!(by_node.len(), 1);
+    }
+
+    #[test]
+    fn detects_mutable_path_inputs() {
+        let mutable = Locked {
+            type_: "path".to_string(),
+            fields: vec![("path".to_string(), Value::String("./default".to_string()))],
+        };
+        assert!(mutable.is_mutable());
+
+        let pinned_path = Locked {
+            type_: "path".to_string(),
+            fields: vec![
+                ("path".to_string(), Value::String("./default".to_string())),
+                (
+                    "narHash".to_string(),
+                    Value::String("sha256-AAAA".to_string()),
+                ),
+            ],
+        };
+        assert!(!pinned_path.is_mutable());
+
+        let github = Locked {
+            type_: "github".to_string(),
+            fields: vec![("rev".to_string(), Value::String("deadbeef".to_string()))],
+        };
+        assert!(!github.is_mutable());
     }
 
     #[test]

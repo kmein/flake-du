@@ -73,6 +73,14 @@ pub enum Value {
 }
 
 impl Locked {
+    /// Returns `true` for entries Nix treats as mutable — primarily relative
+    /// `path:` inputs without a `narHash`. `nix flake archive` refuses to
+    /// operate on lock files containing such entries, and `builtins.fetchTree`
+    /// cannot resolve them outside the parent flake's evaluation context.
+    pub(crate) fn is_mutable(&self) -> bool {
+        self.type_ == "path" && !self.fields.iter().any(|(k, _)| k == "narHash")
+    }
+
     /// Transforms the dependency metadata into a JSON object compatible with `builtins.fetchTree`.
     pub(crate) fn fetch_tree_spec(&self) -> JsonMap<String, JsonValue> {
         let mut spec = JsonMap::new();
